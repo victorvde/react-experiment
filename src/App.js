@@ -20,7 +20,7 @@ class App extends Component {
 
     render() {
         return <div className="App">
-            <form>
+            <form className="form">
                 <MMRInput l={L(this, "current")}>Current MMR: </MMRInput><br/>
                 <MMRInput l={L(this, "true")}>True MMR: </MMRInput><br />
                 <MMRInput l={L(this, "goal")}>Goal MMR: </MMRInput>

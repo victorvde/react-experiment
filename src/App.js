@@ -116,7 +116,7 @@ class MMRGraph extends Component {
 
         let xscale = 1;
         let xstep = 25;
-        let xmark_every = 5;
+        let xmark_every = 2;
         let xline_every = 5;
         let yscale = 25;
         let ystep = 1.25;
@@ -127,17 +127,14 @@ class MMRGraph extends Component {
         let ylines = fixedSteps(vy, vy + h, yline_every * ystep);
         let xmarks = fixedSteps(vx, vx + w, xmark_every * xstep);
         let ymarks = fixedSteps(vy, vy + h, ymark_every * ystep);
-        let datax = fixedSteps(vx - xstep, vx + w + xstep, xstep);
+        let datax = fixedSteps(vx - xstep + 1, vx + w + xstep - 1, xstep);
         let data = datax.map((x) => this.props.f(x / xstep));
-        let polygons = [];
-        for(let i=0; i < datax.length - 1; i++) {
-            let x1 = datax[i];
-            let x2 = datax[i+1];
-            let y1l = -data[i][0] / yscale * ystep;
-            let y1h = -data[i][2] / yscale * ystep;
-            let y2l = -data[i+1][0] / yscale * ystep;
-            let y2h = -data[i+1][2] / yscale * ystep;
-            polygons.push(`${x1},${y1l}  ${x1},${y1h} ${x2},${y2h} ${x2},${y2l}`);
+        let polygon = [];
+        for(let i=0; i < datax.length; i++) {
+            polygon.push(`${datax[i]},${-data[i][0] / yscale * ystep}`);
+        }
+        for(let i=datax.length - 1; i >= 0; i--) {
+            polygon.push(`${datax[i]},${-data[i][2] / yscale * ystep}`);
         }
 
         return <svg width={w} height={h} id="mmrgraph" onMouseDown={this.onMouseDown}>
@@ -150,9 +147,9 @@ class MMRGraph extends Component {
             <rect x="0" y="0" width={w} height={h} fill="#f0f0ff" />
             <g transform={`translate(${-vx} ${-vy})`}>
                 <circle cx={0} cy={0} r="10" fill="#00ff00" />
-                {xlines.map((x) => <line x1={x+.5} x2={x+.5} y1={-max} y2={max} className={x===0?"axis":"grid"} key={`gv${x}`} />)}
-                {ylines.map((y) => <line x1={-max} x2={max} y1={y-.5} y2={y-.5} className={y===0?"axis":"grid"} key={`gh${y}`} />)}
-                {polygons.map((p) => <polygon points={p} fill="#880000" stroke="#880000" /> )}
+                {xlines.map((x) => <line x1={x+.5} x2={x+.5} y1={-max} y2={max} className="grid" key={`gv${x}`} />)}
+                {ylines.map((y) => <line x1={-max} x2={max} y1={y-.5} y2={y-.5} className="grid" key={`gh${y}`} />)}
+                <polygon points={polygon.join(" ")} fill="#880000" stroke="#880000" />
             </g>
             <g transform={`translate(0 ${-vy})`}>
                 {ymarks.map((y) => <text filter="url(#solid)" x={0} y={y} dominantBaseline="text-before-edge" key={`ym${y}`}>{-y / ystep * yscale}</text>)}

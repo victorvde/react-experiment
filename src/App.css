@@ -17,10 +17,6 @@ input:invalid {
     stroke: #cccccc;
 }
 
-.axis {
-    stroke: #000000;
-}
-
 #mmrgraph {
     cursor: grab;
 }

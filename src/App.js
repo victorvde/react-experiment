@@ -29,7 +29,7 @@ class App extends Component {
                 <MMRInput {...L(this, "current")}>Current MMR: </MMRInput><br/>
                 <MMRInput {...L(this, "real")}>True MMR: </MMRInput><br />
             </form>
-            <MMRGraph height={500} width={500} f={mmrData(this.state.current, this.state.real)}/>
+            <MMRGraph height={500} width={500} f={mmrData(+this.state.current, +this.state.real)}/>
         </div>;
     }
 }

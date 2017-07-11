@@ -12,3 +12,15 @@
 input:invalid {
   background-color: #ffdddd;
 }
+
+.grid {
+    stroke: #cccccc;
+}
+
+.axis {
+    stroke: #000000;
+}
+
+#mmrgraph {
+    cursor: grab;
+}

@@ -1,9 +1,48 @@
 import React, { Component, PureComponent } from 'react';
 import './App.css';
 
+
+function winChance(mmr_difference) {
+    return Math.min(0.9, Math.max(0.1, mmr_difference / 1500 + 0.5));
+}
+
+function quantile(a, q) {
+    let acc = 0.;
+    let r = null;
+    a.some((v, i) => {
+        const acc_ = acc + v;
+        if(acc <= q && q <= acc_) {
+            r = i;
+            return true;
+        }
+        acc = acc_;
+        return false;
+    });
+    return r;
+}
+
 function mmrData(current, real) {
-    return function(i) {
-        return [current + i*25, 0, real + i*25];
+    let now = [];
+    now[current] = 1.;
+    const cache = [];
+
+    return function(n) {
+        for(let i=cache.length; i <= n; i++) {
+            cache[i] = [quantile(now, 0.1), quantile(now, 0.5), quantile(now, 0.9)];
+            const next = [];
+            now.forEach((v, mmr) => {
+                const lose = mmr < 25 ? mmr : mmr - 25;
+                const win = mmr + 25;
+                const chance = winChance(real - mmr);
+                if(next[lose] === undefined) next[lose] = 0.;
+                next[lose] += v * (1 - chance);
+                if(next[win] === undefined) next[win] = 0.;
+                next[win] += v * chance;
+            });
+            now = next;
+        }
+
+        return cache[n];
     };
 }
 
@@ -47,7 +86,7 @@ class MMRInput extends PureComponent {
 }
 
 function fixedSteps(start, end, step) {
-    let v = [];
+    const v = [];
     for(let i = Math.ceil(start / step) * step; i < end; i+=step) {
         v.push(i);
     }
@@ -65,7 +104,6 @@ class MMRGraph extends Component {
     }
 
     onMouseDown = (e) =>  {
-        console.log("DOWN");
         if (e.button !== 0) {
             return;
         }
@@ -93,13 +131,11 @@ class MMRGraph extends Component {
     }
 
     onMouseUp = (e) => {
-        console.log("UP");
         this.updatePosition(e);
         this.cleanup();
     }
 
     onMouseMove = (e) => {
-        console.log("MOVE");
         this.updatePosition(e);
         if(e.buttons & 1 === 0) {
             this.cleanup();
@@ -107,29 +143,31 @@ class MMRGraph extends Component {
     }
 
     render() {
-        let w = this.props.width;
-        let h = this.props.height;
+        const bgcolor = "#f0f0ff";
 
-        let [vx, vy] = this.state.pos;
+        const w = this.props.width;
+        const h = this.props.height;
 
-        let max = 1000000;
+        const [vx, vy] = this.state.pos;
 
-        let xscale = 1;
-        let xstep = 25;
-        let xmark_every = 2;
-        let xline_every = 5;
-        let yscale = 25;
-        let ystep = 1.25;
-        let ymark_every = 40;
-        let yline_every = 20;
+        const max = 1000000;
 
-        let xlines = fixedSteps(vx, vx + w, xline_every * xstep);
-        let ylines = fixedSteps(vy, vy + h, yline_every * ystep);
-        let xmarks = fixedSteps(vx, vx + w, xmark_every * xstep);
-        let ymarks = fixedSteps(vy, vy + h, ymark_every * ystep);
-        let datax = fixedSteps(vx - xstep + 1, vx + w + xstep - 1, xstep);
-        let data = datax.map((x) => this.props.f(x / xstep));
-        let polygon = [];
+        const xscale = 1;
+        const xstep = 2.5;
+        const xmark_every = 50;
+        const xline_every = 10;
+        const yscale = 25;
+        const ystep = 1.25;
+        const ymark_every = 40;
+        const yline_every = 20;
+
+        const xlines = fixedSteps(vx, vx + w, xline_every * xstep);
+        const ylines = fixedSteps(vy, vy + h, yline_every * ystep);
+        const xmarks = fixedSteps(vx, vx + w, xmark_every * xstep);
+        const ymarks = fixedSteps(vy, vy + h, ymark_every * ystep);
+        const datax = fixedSteps(vx - xstep + 1, vx + w + xstep - 1, xstep);
+        const data = datax.map((x) => this.props.f(x / xstep));
+        const polygon = [];
         for(let i=0; i < datax.length; i++) {
             polygon.push(`${datax[i]},${-data[i][0] / yscale * ystep}`);
         }
@@ -140,13 +178,12 @@ class MMRGraph extends Component {
         return <svg width={w} height={h} id="mmrgraph" onMouseDown={this.onMouseDown}>
             <defs>
                 <filter id="solid">
-                    <feFlood floodColor="#ffffff"/>
+                    <feFlood floodColor={bgcolor}/>
                     <feComposite in="SourceGraphic"/>
                 </filter>
             </defs>
-            <rect x="0" y="0" width={w} height={h} fill="#f0f0ff" />
+            <rect x="0" y="0" width={w} height={h} fill={bgcolor} />
             <g transform={`translate(${-vx} ${-vy})`}>
-                <circle cx={0} cy={0} r="10" fill="#00ff00" />
                 {xlines.map((x) => <line x1={x+.5} x2={x+.5} y1={-max} y2={max} className="grid" key={`gv${x}`} />)}
                 {ylines.map((y) => <line x1={-max} x2={max} y1={y-.5} y2={y-.5} className="grid" key={`gh${y}`} />)}
                 <polygon points={polygon.join(" ")} fill="#880000" stroke="#880000" />

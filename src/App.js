@@ -6,14 +6,18 @@ function winChance(mmr_difference) {
     return Math.min(0.9, Math.max(0.1, mmr_difference / 1500 + 0.5));
 }
 
-function quantile(a, q) {
+function quantiles(a, q) {
     let acc = 0.;
-    let r = null;
+    let qi = 0;
+    let r = [];
     a.some((v, i) => {
         const acc_ = acc + v;
-        if(acc <= q && q <= acc_) {
-            r = i;
-            return true;
+        if(acc <= q[qi] && q[qi] <= acc_) {
+            r[qi] = i;
+            qi++;
+            if(qi >= q.length) {
+                return true;
+            }
         }
         acc = acc_;
         return false;
@@ -28,7 +32,7 @@ function mmrData(current, real) {
 
     return function(n) {
         for(let i=cache.length; i <= n; i++) {
-            cache[i] = [quantile(now, 0.1), quantile(now, 0.5), quantile(now, 0.9)];
+            cache[i] = quantiles(now, [0.1, 0.5, 0.9]);
             const next = [];
             now.forEach((v, mmr) => {
                 const lose = mmr < 25 ? mmr : mmr - 25;

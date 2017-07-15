@@ -22,25 +22,33 @@ function quantiles(a, q) {
         acc = acc_;
         return false;
     });
+    for(let i = qi; i < q.length; i++) {
+        r[i] = a.length - 1;
+    }
     return r;
 }
 
-function mmrData(current, real) {
+function mmrData(current, real, qs) {
+    const bias = current % 25;
+    let toMmr = (v) => v * 25 + bias;
+    let fromMmr = (v) => (v - bias) / 25;
+
     let now = [];
-    now[current] = 1.;
+    now[fromMmr(current)] = 1.;
     const cache = [];
 
-    return function(n) {
+    return function(n_) {
+        let n = Math.round(n_);
         for(let i=cache.length; i <= n; i++) {
-            cache[i] = quantiles(now, [0.1, 0.5, 0.9]);
+            cache[i] = quantiles(now, qs).map(toMmr);
             const next = [];
             now.forEach((v, mmr) => {
-                const lose = mmr < 25 ? mmr : mmr - 25;
-                const win = mmr + 25;
-                const chance = winChance(real - mmr);
-                if(next[lose] === undefined) next[lose] = 0.;
+                const lose = mmr > 0 ? mmr - 1: mmr;
+                const win = mmr + 1;
+                const chance = winChance(real - toMmr(mmr));
+                if(typeof next[lose] === "undefined") next[lose] = 0.;
                 next[lose] += v * (1 - chance);
-                if(next[win] === undefined) next[win] = 0.;
+                if(typeof next[win] === "undefined") next[win] = 0.;
                 next[win] += v * chance;
             });
             now = next;
@@ -63,28 +71,32 @@ class App extends Component {
         this.state = {
             current: 1000,
             real: 3000,
+            low: 10,
+            high: 90,
         };
     }
 
     render() {
         return <div className="App">
             <form className="form">
-                <MMRInput {...L(this, "current")}>Current MMR: </MMRInput><br/>
-                <MMRInput {...L(this, "real")}>True MMR: </MMRInput><br />
+                <SliderInput {...L(this, "current")} min={1} max={10000}>Current MMR: </SliderInput><br/>
+                <SliderInput {...L(this, "real")} min={1} max={10000}>True MMR: </SliderInput><br />
+                <SliderInput {...L(this, "low")} min={1} max={99}>Low quantile: </SliderInput><br/>
+                <SliderInput {...L(this, "high")} min={1} max={99}>High quantile: </SliderInput><br />
             </form>
-            <MMRGraph height={500} width={500} f={mmrData(+this.state.current, +this.state.real)}/>
+            <MMRGraph height={500} width={500} f={mmrData(+this.state.current, +this.state.real, [+this.state.low/100, 0.5, +this.state.high/100])}/>
         </div>;
     }
 }
 
-class MMRInput extends PureComponent {
+class SliderInput extends PureComponent {
     handleChange = (event) => { this.props.onChange(event.target.value); };
 
     render() {
         return <label>
             {this.props.children}
             <input type="text" pattern="[0-9]+" size="4" value={this.props.value} onChange={this.handleChange} />
-            <input type="range" min="1" max="10000" value={this.props.value} onChange={this.handleChange} />
+            <input type="range" min={this.props.min} max={this.props.max} value={this.props.value} onChange={this.handleChange} />
         </label>;
     }
 }
@@ -179,6 +191,11 @@ class MMRGraph extends Component {
             polygon.push(`${datax[i]},${-data[i][2] / yscale * ystep}`);
         }
 
+        const line = [];
+        for(let i=0; i < datax.length; i++) {
+            line.push(`${datax[i]},${-data[i][1] / yscale * ystep}`);
+        }
+
         return <svg width={w} height={h} id="mmrgraph" onMouseDown={this.onMouseDown}>
             <defs>
                 <filter id="solid">
@@ -190,7 +207,8 @@ class MMRGraph extends Component {
             <g transform={`translate(${-vx} ${-vy})`}>
                 {xlines.map((x) => <line x1={x+.5} x2={x+.5} y1={-max} y2={max} className="grid" key={`gv${x}`} />)}
                 {ylines.map((y) => <line x1={-max} x2={max} y1={y-.5} y2={y-.5} className="grid" key={`gh${y}`} />)}
-                <polygon points={polygon.join(" ")} fill="#880000" stroke="#880000" />
+                <polygon points={polygon.join(" ")} fill="#cc0000" stroke="none" />
+                <polyline points={line.join(" ")} fill="none" stroke="#000000" />
             </g>
             <g transform={`translate(0 ${-vy})`}>
                 {ymarks.map((y) => <text filter="url(#solid)" x={0} y={y} dominantBaseline="text-before-edge" key={`ym${y}`}>{-y / ystep * yscale}</text>)}

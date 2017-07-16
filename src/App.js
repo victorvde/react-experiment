@@ -1,7 +1,6 @@
 import React, { Component, PureComponent } from 'react';
 import './App.css';
 
-
 function winChance(mmr_difference) {
     return Math.min(0.9, Math.max(0.1, mmr_difference / 1500 + 0.5));
 }
@@ -12,7 +11,7 @@ function quantiles(a, q) {
     let r = [];
     a.some((v, i) => {
         const acc_ = acc + v;
-        if(acc <= q[qi] && q[qi] <= acc_) {
+        while(acc <= q[qi] && q[qi] <= acc_) {
             r[qi] = i;
             qi++;
             if(qi >= q.length) {
@@ -71,8 +70,7 @@ class App extends Component {
         this.state = {
             current: 1000,
             real: 3000,
-            low: 10,
-            high: 90,
+            interval: 95,
         };
     }
 
@@ -81,10 +79,9 @@ class App extends Component {
             <form className="form">
                 <SliderInput {...L(this, "current")} min={1} max={10000}>Current MMR: </SliderInput><br/>
                 <SliderInput {...L(this, "real")} min={1} max={10000}>True MMR: </SliderInput><br />
-                <SliderInput {...L(this, "low")} min={1} max={99}>Low quantile: </SliderInput><br/>
-                <SliderInput {...L(this, "high")} min={1} max={99}>High quantile: </SliderInput><br />
+                <SliderInput {...L(this, "interval")} min={1} max={99}>Interval %: </SliderInput><br/>
             </form>
-            <MMRGraph height={500} width={500} f={mmrData(+this.state.current, +this.state.real, [+this.state.low/100, 0.5, +this.state.high/100])}/>
+            <MMRGraph height={500} width={500} f={mmrData(+this.state.current, +this.state.real, [0.5 - +this.state.interval/100/2, 0.5, 0.5 + +this.state.interval/100/2])}/>
         </div>;
     }
 }
@@ -95,7 +92,7 @@ class SliderInput extends PureComponent {
     render() {
         return <label>
             {this.props.children}
-            <input type="text" pattern="[0-9]+" size="4" value={this.props.value} onChange={this.handleChange} />
+            <input type="text" pattern="[0-9.]+" size="4" value={this.props.value} onChange={this.handleChange} />
             <input type="range" min={this.props.min} max={this.props.max} value={this.props.value} onChange={this.handleChange} />
         </label>;
     }
